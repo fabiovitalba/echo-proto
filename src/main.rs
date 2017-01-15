@@ -100,7 +100,7 @@ fn main() {
 
 
      // Specify the localhost address
-     let addr = "0.0.0.0:12345".parse().unwrap();
+     let addr = "127.0.0.1:23".parse().unwrap();
 
      // The builder requires a protocol and an address
      let server = TcpServer::new(LineProto, addr);
@@ -108,5 +108,5 @@ fn main() {
      // We provide a way to *instantiate* the service for each new
      // connection; here, we just immediately return a new instance.
      server.serve(|| Ok(Echo));
-     
+
 }
