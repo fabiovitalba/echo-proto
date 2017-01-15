@@ -11,7 +11,8 @@ extern crate tokio_service;
 
 use std::io;
 use std::str;
-use tokio_core::io::{Codec, EasyBuf};
+use tokio_core::io::{Codec, EasyBuf, Io, Framed};
+use tokio_proto::pipeline::ServerProto;
 
 pub struct LineCodec;
 
@@ -46,6 +47,23 @@ impl Codec for LineCodec {
         buf.extend_from_slice(msg.as_bytes());
         buf.push(b'\n');
         Ok(())
+    }
+}
+
+pub struct LineProto;
+
+impl<T: Io + 'static> ServerProto<T> for LineProto {
+    /// For this protocol style, `Request` matches the codec `In` type
+    type Request = String;
+
+    /// For this protocol style, `Response` matches the coded `Out` type
+    type Response = String;
+
+    /// A bit of boilerplate to hook in the codec:
+    type Transport = Framed<T, LineCodec>;
+    type BindTransport = Result<Self::Transport, io::Error>;
+    fn bind_transport(&self, io: T) -> Self::BindTransport {
+        Ok(io.framed(LineCodec))
     }
 }
 
