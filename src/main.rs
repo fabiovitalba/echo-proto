@@ -9,10 +9,12 @@ extern crate tokio_core;
 extern crate tokio_proto;
 extern crate tokio_service;
 
-use std::io;
-use std::str;
+use std::{io,str};
 use tokio_core::io::{Codec, EasyBuf, Io, Framed};
 use tokio_proto::pipeline::ServerProto;
+use tokio_proto::TcpServer;
+use tokio_service::Service;
+use futures::{future, Future, BoxFuture};
 
 pub struct LineCodec;
 
@@ -67,6 +69,26 @@ impl<T: Io + 'static> ServerProto<T> for LineProto {
     }
 }
 
+pub struct Echo;
+
+impl Service for Echo {
+    // These types must match the corresponding protocol types:
+    type Request = String;
+    type Response = String;
+
+    // For non-streaming protocols, service errors are always io::Error
+    type Error = io::Error;
+
+    // The future for computing the response; box it for simplicity.
+    type Future = BoxFuture<Self::Response, Self::Error>;
+
+    // Produce a future for computing a response from a request.
+    fn call(&self, req: Self::Request) -> Self::Future {
+        // In this case, the response is immediate.
+        future::ok(req).boxed()
+    }
+}
+
 fn main() {
     /* Some Documentation about Tokio.rs and how it works:
      *
@@ -77,6 +99,14 @@ fn main() {
      */
 
 
+     // Specify the localhost address
+     let addr = "0.0.0.0:12345".parse().unwrap();
 
-    println!("Hello, world!");
+     // The builder requires a protocol and an address
+     let server = TcpServer::new(LineProto, addr);
+
+     // We provide a way to *instantiate* the service for each new
+     // connection; here, we just immediately return a new instance.
+     server.serve(|| Ok(Echo));
+     
 }
