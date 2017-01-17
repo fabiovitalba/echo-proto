@@ -16,17 +16,20 @@ use tokio_proto::TcpServer;
 use tokio_service::Service;
 use futures::{future, Future, BoxFuture};
 
+// The LineCodec represents how the incoming messages are decoded and the
+// outgoing messages are encoded.
 pub struct LineCodec;
-
 impl Codec for LineCodec {
     /* Codecs in Tokio implement the Codec trait, which implements message encoding and decoding.
      * To start with, we’ll need to specify the message type. In gives the types of incoming
      * messages after decoding, while Out gives the type of outgoing messages prior to encoding.
      */
-    type In = String;
-    type Out = String;
+    type In = String;   // type of incomming messages after decoding
+    type Out = String;  // type of outgoing messages before encoding
 
     fn decode(&mut self, buf: &mut EasyBuf) -> io::Result<Option<Self::In>> {
+        // For the decode function we are given a Arc<u8> Buffer input
+        // This input will be translated into the Decoding Result
         if let Some(i) = buf.as_slice().iter().position(|&b| b == b'\n') {
             // remove the serialized frame from the buffer.
             let line = buf.drain_to(i);
@@ -46,14 +49,17 @@ impl Codec for LineCodec {
     }
 
     fn encode(&mut self, msg: String, buf: &mut Vec<u8>) -> io::Result<()> {
+        // the encode function gives access to a mutable Vec<u8> which represents the
+        // buffer that contains the outgoing message
+        // so this function simply encodes the msg string into the u8 Vector.
         buf.extend_from_slice(msg.as_bytes());
         buf.push(b'\n');
         Ok(())
     }
 }
 
+// this is the Protocol used to transmit LineCodec encoded Messages
 pub struct LineProto;
-
 impl<T: Io + 'static> ServerProto<T> for LineProto {
     /// For this protocol style, `Request` matches the codec `In` type
     type Request = String;
@@ -69,8 +75,8 @@ impl<T: Io + 'static> ServerProto<T> for LineProto {
     }
 }
 
+// Echo is the Service handling all the clients.
 pub struct Echo;
-
 impl Service for Echo {
     // These types must match the corresponding protocol types:
     type Request = String;
@@ -85,6 +91,7 @@ impl Service for Echo {
     // Produce a future for computing a response from a request.
     fn call(&self, req: Self::Request) -> Self::Future {
         // In this case, the response is immediate.
+        // future::ok returns an immediate response
         future::ok(req).boxed()
     }
 }
